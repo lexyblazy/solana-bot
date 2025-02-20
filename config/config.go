@@ -1,0 +1,33 @@
+package config
+
+type HeliusConfig struct {
+	ApiKey       string `json:"apiKey"`
+	RpcUrl       string `json:"rpcUrl"`
+	WebSocketUrl string `json:"wsUrl"`
+	BaseApiUrl   string `json:"baseApiUrl"`
+}
+
+type DexScreenerConfig struct {
+	BaseUrl       string `json:"baseUrl"`
+	SolanaChainId string `json:"solanaChainId"`
+}
+
+type Config struct {
+	LiquidityPool struct {
+		RaydiumProgramId string `json:"raydiumProgramId"`
+		MigrationMessage string `json:"migrationMessage"`
+	} `json:"liquidityPool"`
+
+	Solana struct {
+		NativeMint string `json:"nativeMint"`
+	} `json:"solana"`
+
+	Helius HeliusConfig `json:"helius"`
+
+	Engine struct {
+		DSN          string `json:"databaseName"`
+		LogBatchSize uint16 `json:"processLogBatchSize"`
+	} `json:"engine"`
+
+	DexScreener DexScreenerConfig `json:"dexscreener"`
+}

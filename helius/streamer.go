@@ -16,7 +16,7 @@ func createConnection(c *config.HeliusConfig) *websocket.Conn {
 	conn, _, err := websocket.DefaultDialer.Dial(wsUrl, nil)
 
 	if err != nil {
-		log.Fatal("Failed to establish websocket connect")
+		log.Fatal("Failed to establish websocket connect", err)
 	}
 
 	log.Println("Connection established")

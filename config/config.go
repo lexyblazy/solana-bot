@@ -26,12 +26,17 @@ type Config struct {
 
 	Engine struct {
 		DSN          string `json:"databaseName"`
-		LogBatchSize int `json:"processLogBatchSize"`
+		LogBatchSize int    `json:"processLogBatchSize"`
 
 		RefreshTokenMetadata struct {
 			BatchSize        int `json:"batchSize"`
 			FrequencyMinutes int `json:"frequencyMinutes"`
 		} `json:"refreshTokenMetadata"`
+
+		RemoveScamTokens struct {
+			MinMarketCap int `json:"minMarketCap"`
+			MinAgeHours   int `json:"minAgeHours"`
+		} `json:"removeScamTokens"`
 	} `json:"engine"`
 
 	DexScreener DexScreenerConfig `json:"dexscreener"`

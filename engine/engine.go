@@ -156,12 +156,33 @@ func New(c *config.Config) *Engine {
 
 }
 
+func (e *Engine) RemoveScamTokens() {
+
+	scamTokensConfig := e.config.Engine.RemoveScamTokens
+
+	for {
+
+		scamTokens := e.db.GetScamTokens(scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
+		if len(scamTokens) > 0 {
+
+			e.db.DeleteTokens(scamTokens)
+		}
+
+		time.Sleep(5 * time.Minute)
+	}
+
+}
+
+
+
 func (e *Engine) Start() {
 
+	go e.RemoveScamTokens()
 	go e.ProcessLogs()
 	go e.DeleteProcessedLogs()
 	go e.RefreshTokensMetadata()
 
+	// subscribe to helius websocket streaming
 	go e.hs.SubscribeToLogs()
 	go e.hs.ReadMessages()
 

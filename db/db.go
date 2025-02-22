@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -67,13 +68,19 @@ func toInterfaceSlice(values []string) []interface{} {
 	return result
 }
 
-func (s *SqlClient) UpdateTokensAsProcessed(addresses []string) {
+func makePlaceHolders(length int) []string {
+	placeholders := make([]string, length)
 
-	placeholders := make([]string, len(addresses))
-
-	for i := range addresses {
+	for i := 0; i < length; i++ {
 		placeholders[i] = "?"
 	}
+
+	return placeholders
+}
+
+func (s *SqlClient) UpdateTokensAsProcessed(addresses []string) {
+
+	placeholders := makePlaceHolders(len(addresses))
 
 	query := fmt.Sprintf("update tokens set lastProcessedAt = ? where contractAddress in (%s)", strings.Join(placeholders, ","))
 
@@ -120,7 +127,9 @@ func (s *SqlClient) DeleteLogs() {
 		return
 	}
 
-	log.Printf("Deleted %d processed logs \n", count)
+	if count > 0 {
+		log.Printf("Deleted %d processed logs \n", count)
+	}
 
 }
 
@@ -152,6 +161,77 @@ func (s *SqlClient) GetUnProcessedLogs(limit uint) []RpcLog {
 
 	return rpcLogs
 
+}
+
+func (s *SqlClient) GetScamTokens(minMarketCap int, minAgeHours int) []string {
+
+	threshold := time.Now().UnixMilli() - int64(minAgeHours)*time.Hour.Milliseconds()
+
+	query := `select t.contractAddress from tokens t where t.marketCap < ? AND t.pairCreatedAt < ?`
+
+	rows, err := s.db.Query(query, minMarketCap, threshold)
+
+	if err != nil {
+		log.Println("GetScamTokens:", err)
+	}
+
+	var addresses []string
+	for rows.Next() {
+		var contractAddress string
+		rows.Scan(&contractAddress)
+		addresses = append(addresses, contractAddress)
+	}
+
+	return addresses
+}
+
+func (s *SqlClient) DeleteTokens(addresses []string) {
+	placeholders := makePlaceHolders(len(addresses))
+
+	// delete the tokens and their market data
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
+
+	if err != nil {
+		log.Println("DeleteTokens: Failed to begin tx", err)
+		return
+	}
+
+	// delete market data query
+	query1 := fmt.Sprintf(`delete from market_data where contractAddress IN (%s)`, strings.Join(placeholders, ","))
+	result1, err := tx.Exec(query1, toInterfaceSlice(addresses)...)
+
+	if err != nil {
+		log.Print("DeleteTokens: Failed to delete market data ")
+		return
+	}
+
+	c1, _ := result1.RowsAffected()
+	log.Printf("DeleteTokens: Deleted %d market_data records \n", c1)
+
+	// delete token query
+	query2 := fmt.Sprintf(`delete from tokens where contractAddress IN (%s)`, strings.Join(placeholders, ","))
+	result2, err := tx.Exec(query2, toInterfaceSlice(addresses)...)
+
+	if err != nil {
+		log.Print("DeleteTokens: Failed to delete tokens ")
+
+		tx.Rollback()
+		return
+	}
+
+	c2, _ := result2.RowsAffected()
+	log.Printf("DeleteTokens: Deleted %d token records \n", c2)
+
+	err = tx.Commit()
+
+	if err != nil {
+		log.Println("DeleteTokens: Failed to commit tx", err)
+		return
+	}
+
+	log.Printf("DeleteTokens: Deleted %d tokens \n", len(addresses))
 }
 
 func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int) []Token {

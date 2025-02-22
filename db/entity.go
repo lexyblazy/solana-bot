@@ -20,3 +20,14 @@ type Token struct {
 	MarketCap       *float64   // nullable filed
 	PairCreatedAt   *time.Time // nullable filed
 }
+
+type MarketData struct {
+	Id              uint64
+	Timestamp       time.Time
+	MarketCap       float64
+	Fdv             float64
+	Liquidity       float64
+	PriceNative     float64
+	PriceUsd        float64
+	ContractAddress string
+}

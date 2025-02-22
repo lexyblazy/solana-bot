@@ -111,23 +111,32 @@ func (e *Engine) handleLogSubscribeMessage(message []byte) {
 	}
 }
 
-func (e *Engine) ProcessTokens() {
+func (e *Engine) RefreshTokensMetadata() {
+
+	refreshConfig := e.config.Engine.RefreshTokenMetadata
+
 	for {
 		addresses := []string{}
-		tokens := e.db.GetTokensForProcessing(30)
+		tokens := e.db.GetTokensForProcessing(refreshConfig.BatchSize, refreshConfig.FrequencyMinutes)
 
-		log.Printf("ProcessTokens: Retrieved %d tokens from db for processing \n", len(tokens))
+		if len(tokens) > 0 {
+			log.Printf("RefreshTokensMetadata: Retrieved %d tokens from db for processing \n", len(tokens))
 
-		for _, token := range tokens {
-			addresses = append(addresses, token.ContractAddress)
-		}
+			for _, token := range tokens {
+				addresses = append(addresses, token.ContractAddress)
+			}
 
-		dexScreenerTokens := e.ds.GetTokenByAddress(addresses)
-		log.Printf("ProcessTokens: Retrieved %d tokens from dexscreener \n", len(dexScreenerTokens))
+			dexScreenerTokens := e.ds.GetTokenByAddress(addresses)
+			log.Printf("RefreshTokensMetadata: Retrieved %d tokens from dexscreener \n", len(dexScreenerTokens))
 
-		if len(dexScreenerTokens) > 0 {
-			e.db.UpdateTokenMetaData(dexScreenerTokens)
-			log.Printf("ProcessTokens: Updated token metadata for %d tokens \n", len(dexScreenerTokens))
+			if len(dexScreenerTokens) > 0 {
+				e.db.UpdateTokenData(dexScreenerTokens)
+				log.Printf("RefreshTokensMetadata: Updated token metadata for %d tokens \n", len(dexScreenerTokens))
+			}
+
+			e.db.UpdateTokensAsProcessed(addresses)
+		} else {
+			log.Printf("RefreshTokensMetadata: is configured for every  %d minutes. You can adjust the schedule \n", refreshConfig.FrequencyMinutes)
 		}
 
 		time.Sleep(5 * time.Second)
@@ -151,7 +160,7 @@ func (e *Engine) Start() {
 
 	go e.ProcessLogs()
 	go e.DeleteProcessedLogs()
-	go e.ProcessTokens()
+	go e.RefreshTokensMetadata()
 
 	go e.hs.SubscribeToLogs()
 	go e.hs.ReadMessages()

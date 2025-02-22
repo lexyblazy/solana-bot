@@ -4,14 +4,14 @@ import (
 	"time"
 )
 
-type RpcLog struct {
+type RpcLogEntity struct {
 	Id          uint64
 	Signature   string
 	CreatedAt   time.Time
 	ProcessedAt *time.Time // nullable field
 }
 
-type Token struct {
+type TokenEntity struct {
 	Id              uint64
 	ContractAddress string
 	CreatedAt       time.Time
@@ -21,7 +21,7 @@ type Token struct {
 	PairCreatedAt   *time.Time // nullable filed
 }
 
-type MarketData struct {
+type MarketDataEntity struct {
 	Id              uint64
 	Timestamp       time.Time
 	MarketCap       float64

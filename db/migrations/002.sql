@@ -7,12 +7,13 @@ CREATE TABLE tokens (
 );
 
 CREATE UNIQUE INDEX tokens_unique_contractAddress  ON tokens("contractAddress");
-CREATE INDEX tokens_marketCap  ON tokens("marketCap");
 
 ALTER TABLE tokens ADD symbol VARCHAR
 ALTER TABLE tokens ADD marketCap REAL
 ALTER TABLE tokens ADD pairCreatedAt DATETIME
 
+CREATE INDEX tokens_marketCap  ON tokens("marketCap");
+CREATE INDEX tokens_symbol ON tokens("symbol");
 
 
 -- DOWN

@@ -2,8 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"solana-bot/dexscreener"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -50,10 +52,51 @@ func (s *SqlClient) UpdateLogEventAsProcessed(signature string) {
 	_, err := s.db.Exec(`update rpc_logs set "processedAt" = ? where signature = ? and "processedAt" is null`, time.Now(), signature)
 
 	if err != nil {
-		log.Println("MarkLogEventAsProcessed:", err)
+		log.Println("UpdateLogEventAsProcessed:", err)
 
 		return
 	}
+
+}
+
+func toInterfaceSlice(values []string) []interface{} {
+	var result []interface{}
+	for _, name := range values {
+		result = append(result, name)
+	}
+	return result
+}
+
+func (s *SqlClient) UpdateTokensAsProcessed(addresses []string) {
+
+	placeholders := make([]string, len(addresses))
+
+	for i := range addresses {
+		placeholders[i] = "?"
+	}
+
+	query := fmt.Sprintf("update tokens set lastProcessedAt = ? where contractAddress in (%s)", strings.Join(placeholders, ","))
+
+	var params []interface{}
+	params = append(params, time.Now().UnixMilli()) // add the lastProcessedAt to the values list
+	params = append(params, toInterfaceSlice(addresses)...)
+	result, err := s.db.Exec(query, params...)
+
+	if err != nil {
+		log.Println("UpdateTokensAsProcessed Query:", err)
+
+		return
+	}
+
+	count, err := result.RowsAffected()
+
+	if err != nil {
+		log.Println("UpdateTokensAsProcessed RowsAffected:", err)
+
+		return
+	}
+
+	log.Printf("UpdateTokensAsProcessed: updated %d tokens \n", count)
 
 }
 
@@ -111,12 +154,14 @@ func (s *SqlClient) GetUnProcessedLogs(limit uint) []RpcLog {
 
 }
 
-func (s *SqlClient) GetTokensForProcessing(limit uint) []Token {
+func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int) []Token {
 	var tokens []Token
 
-	query := `select t."contractAddress" from  tokens t where t."lastProcessedAt" is null LIMIT ?`
+	minThreshold := time.Now().UnixMilli() - int64(frequencyMinutes)*time.Minute.Milliseconds()
 
-	rows, err := s.db.Query(query, limit)
+	query := `select t."contractAddress" from  tokens t where t."lastProcessedAt" is null or t.lastProcessedAt < ? LIMIT ?`
+
+	rows, err := s.db.Query(query, minThreshold, limit)
 
 	if err != nil {
 		log.Println("GetTokensForProcessing:", err)
@@ -143,24 +188,36 @@ func (s *SqlClient) GetTokensForProcessing(limit uint) []Token {
 func (s *SqlClient) updateTokenMetadata(token dexscreener.TokensByAddress) {
 	query := `
 	update tokens set
-		"lastProcessedAt" = ?,
 		symbol = ?,
-		"marketCap" = ?,
+		marketCap = ?,
 		"pairCreatedAt" = ?
 	 where "contractAddress" = ?`
 
-	_, err := s.db.Exec(query, time.Now(), token.BaseToken.Symbol, token.MarketCap, time.UnixMilli(token.PairCreatedAt), token.BaseToken.Address)
+	_, err := s.db.Exec(query, token.BaseToken.Symbol, token.MarketCap, token.PairCreatedAt, token.BaseToken.Address)
 
 	if err != nil {
 		log.Printf("updateTokenMetadata: Failed to update token %s \n: err: %s", token.BaseToken.Address, err)
 	}
+}
+
+func (s *SqlClient) insertMarketData(token dexscreener.TokensByAddress) {
+	query := `insert into market_data("timestamp","marketCap", "fdv", "liquidityUsd", "priceNative", "priceUsd", "contractAddress")
+	 values(?, ?, ?, ?, ?, ?, ?)`
+
+	_, err := s.db.Exec(query, time.Now().UnixMilli(), token.MarketCap, token.Fdv, token.Liquidity.Usd, token.PriceNative, token.PriceUsd, token.BaseToken.Address)
+
+	if err != nil {
+		log.Printf("insertMarketData: Failed to insert marketData %s \n: err: %s", token.BaseToken.Address, err)
+	}
 
 }
 
-func (s *SqlClient) UpdateTokenMetaData(tokens []dexscreener.TokensByAddress) {
+func (s *SqlClient) UpdateTokenData(tokens []dexscreener.TokensByAddress) {
 
 	for _, token := range tokens {
-		s.updateTokenMetadata(token)
+		go s.insertMarketData(token)
+		go s.updateTokenMetadata(token)
+
 	}
 }
 

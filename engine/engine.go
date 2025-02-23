@@ -16,6 +16,7 @@ import (
 	"solana-bot/db"
 	"solana-bot/dexscreener"
 	"solana-bot/helius"
+	"solana-bot/wallet"
 
 	"strings"
 	"time"
@@ -24,13 +25,11 @@ import (
 )
 
 type Engine struct {
-	db *db.SqlClient
-
-	hs  *helius.Streamer
-	hhc *helius.HttpClient
-
-	ds *dexscreener.Client
-
+	db     *db.SqlClient
+	w      *wallet.WalletClient
+	hs     *helius.Streamer
+	hhc    *helius.HttpClient
+	ds     *dexscreener.Client
 	config *config.Config
 }
 
@@ -152,18 +151,6 @@ func (e *Engine) RefreshTokensMetadata() {
 		time.Sleep(5 * time.Second)
 
 	}
-}
-
-func New(c *config.Config) *Engine {
-
-	return &Engine{
-		db:     db.New(c.Engine.DSN),
-		hs:     helius.NewStreamer(&c.Helius),
-		hhc:    helius.NewHttpClient(&c.Helius),
-		config: c,
-		ds:     dexscreener.New(&c.DexScreener),
-	}
-
 }
 
 func (e *Engine) RemoveScamTokens() {
@@ -303,6 +290,19 @@ func (e *Engine) Start() {
 
 	for msg := range e.hs.GetMessageChannel() {
 		go e.handleLogSubscribeMessage(msg)
+	}
+
+}
+
+func New(c *config.Config) *Engine {
+
+	return &Engine{
+		db:     db.New(c.Engine.DSN),
+		hs:     helius.NewStreamer(&c.Helius),
+		hhc:    helius.NewHttpClient(&c.Helius),
+		config: c,
+		ds:     dexscreener.New(&c.DexScreener),
+		w:      wallet.New(&c.Wallet),
 	}
 
 }

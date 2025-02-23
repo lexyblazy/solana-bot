@@ -1,8 +1,16 @@
 package engine
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"text/template"
+
+	// "fmt"
+	// "io"
 	"log"
+	"os"
 
 	"solana-bot/config"
 	"solana-bot/db"
@@ -11,6 +19,8 @@ import (
 
 	"strings"
 	"time"
+
+	"github.com/leekchan/accounting"
 )
 
 type Engine struct {
@@ -161,6 +171,8 @@ func (e *Engine) RemoveScamTokens() {
 	scamTokensConfig := e.config.Engine.RemoveScamTokens
 
 	for {
+		log.Printf("RemoveScamTokens: Removing scam tokens where marketCap < $%v and older than %v hours \n",
+			scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 
 		scamTokens := e.db.GetScamTokens(scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 		if len(scamTokens) > 0 {
@@ -173,7 +185,110 @@ func (e *Engine) RemoveScamTokens() {
 
 }
 
+func (e *Engine) CreateRugReport(t db.TokenEntity, m []db.MarketDataEntity) {
 
+	ac := accounting.Accounting{Symbol: "$", Precision: 2}
+	var mr []db.MarketDataEntity
+
+	// want to limit number of market data records. Maximum of 5
+	if len(m) > 6 {
+		mr = append(mr, m[:3]...)
+		mr = append(mr, m[len(m)-3:]...)
+	} else {
+		mr = append(mr, m...)
+	}
+
+	reportData := RugReportData{
+		Token:      t,
+		MarketData: mr,
+	}
+
+	var output bytes.Buffer
+
+	report := `
+symbol: ${{.Token.Symbol}}
+C.A: {{.Token.ContractAddress}}
+createdAt: {{formatDate .Token.PairCreatedAt}}
+
+Timestamp MarketCap Liquidity
+{{range .MarketData}}
+{{formatTime .Timestamp}} {{formatMoney .MarketCap}} {{formatMoney .LiquidityUsd}}
+{{end}}
+	`
+
+	tmpl, err := template.New(t.ContractAddress).Funcs(template.FuncMap{
+		"formatTime": func(timestamp *time.Time) string {
+			return timestamp.Format(time.TimeOnly)
+		},
+
+		"formatDate": func(timestamp *time.Time) string {
+			return timestamp.Format(time.DateTime)
+		},
+
+		"formatMoney": func(val float64) string {
+			return ac.FormatMoney(int64(val))
+		},
+	}).Parse(report)
+
+	if err != nil {
+		log.Println("CreateRugReport: Failed to init template", err)
+		return
+	}
+
+	err = tmpl.Execute(&output, reportData)
+
+	if err != nil {
+		log.Println("CreateRugReport: Failed to execute template", err)
+		return
+	}
+
+	fileName := fmt.Sprintf("reports/%s.txt", t.ContractAddress)
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+
+	if err != nil {
+		log.Println("CreateRugReport:", err)
+
+		return
+	}
+
+	file.Write(output.Bytes())
+
+}
+
+func (e *Engine) GetRugsReport() {
+	file, err := os.Open("./rug_tokens.txt")
+
+	if err != nil {
+		log.Println("Failed to open rug_tokens.txt file", err)
+
+		return
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	addresses := []string{}
+
+	for scanner.Scan() {
+		address := scanner.Text()
+		addresses = append(addresses, address)
+	}
+
+	tokens := e.db.GetTokensByContractAddress(addresses)
+
+	for _, token := range tokens {
+		marketData := e.db.GetTokenMarketData(token.ContractAddress)
+
+		if len(marketData) == 0 {
+			continue
+		}
+
+		e.CreateRugReport(token, marketData)
+
+	}
+
+}
 
 func (e *Engine) Start() {
 

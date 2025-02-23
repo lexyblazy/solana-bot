@@ -133,9 +133,9 @@ func (s *SqlClient) DeleteLogs() {
 
 }
 
-func (s *SqlClient) GetUnProcessedLogs(limit uint) []RpcLog {
+func (s *SqlClient) GetUnProcessedLogs(limit uint) []RpcLogEntity {
 
-	var rpcLogs []RpcLog
+	var rpcLogs []RpcLogEntity
 
 	query := `select id, signature, createdAt, processedAt from  rpc_logs r where r."processedAt" is null LIMIT ?`
 
@@ -149,7 +149,7 @@ func (s *SqlClient) GetUnProcessedLogs(limit uint) []RpcLog {
 
 	for rows.Next() {
 
-		var rpcLog RpcLog
+		var rpcLog RpcLogEntity
 		err = rows.Scan(&rpcLog.Id, &rpcLog.Signature, &rpcLog.CreatedAt, &rpcLog.ProcessedAt)
 
 		if err != nil {
@@ -234,8 +234,8 @@ func (s *SqlClient) DeleteTokens(addresses []string) {
 	log.Printf("DeleteTokens: Deleted %d tokens \n", len(addresses))
 }
 
-func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int) []Token {
-	var tokens []Token
+func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int) []TokenEntity {
+	var tokens []TokenEntity
 
 	minThreshold := time.Now().UnixMilli() - int64(frequencyMinutes)*time.Minute.Milliseconds()
 
@@ -251,7 +251,7 @@ func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int) []To
 
 	for rows.Next() {
 
-		var token Token
+		var token TokenEntity
 		err = rows.Scan(&token.ContractAddress)
 
 		if err != nil {
@@ -289,6 +289,54 @@ func (s *SqlClient) insertMarketData(token dexscreener.TokensByAddress) {
 	if err != nil {
 		log.Printf("insertMarketData: Failed to insert marketData %s \n: err: %s", token.BaseToken.Address, err)
 	}
+
+}
+
+func (s *SqlClient) GetTokensByContractAddress(addresses []string) []TokenEntity {
+	placeholders := makePlaceHolders(len(addresses))
+	var tokens []TokenEntity
+
+	query := fmt.Sprintf(`select t.contractAddress, t.symbol, t.pairCreatedAt from tokens t where t.contractAddress IN (%s)`, strings.Join(placeholders, ","))
+
+	rows, err := s.db.Query(query, toInterfaceSlice(addresses)...)
+
+	if err != nil {
+		log.Println("GetTokensByContractAddress:", err)
+
+		return tokens
+	}
+
+	for rows.Next() {
+		var token TokenEntity
+		rows.Scan(&token.ContractAddress, &token.Symbol, &token.PairCreatedAt)
+
+		tokens = append(tokens, token)
+	}
+
+	return tokens
+}
+
+func (s *SqlClient) GetTokenMarketData(address string) []MarketDataEntity {
+
+	var marketData []MarketDataEntity
+
+	rows, err := s.db.Query(`select timestamp, marketCap, liquidityUsd from market_data md where md.contractAddress = ? order by md.marketCap desc`, address)
+
+	if err != nil {
+
+		log.Println("GetTokenMarketData:", err)
+		return marketData
+	}
+
+	for rows.Next() {
+		var m MarketDataEntity
+
+		rows.Scan(&m.Timestamp, &m.MarketCap, &m.LiquidityUsd)
+
+		marketData = append(marketData, m)
+	}
+
+	return marketData
 
 }
 

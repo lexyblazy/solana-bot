@@ -26,7 +26,7 @@ type MarketDataEntity struct {
 	Timestamp       time.Time
 	MarketCap       float64
 	Fdv             float64
-	Liquidity       float64
+	LiquidityUsd    float64
 	PriceNative     float64
 	PriceUsd        float64
 	ContractAddress string

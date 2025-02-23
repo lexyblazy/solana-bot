@@ -12,6 +12,11 @@ type DexScreenerConfig struct {
 	SolanaChainId string `json:"solanaChainId"`
 }
 
+type WalletConfig struct {
+	Pubkey  string `json:"publicKey"`
+	PrivKey string `json:"privateKey"`
+}
+
 type Config struct {
 	LiquidityPool struct {
 		RaydiumProgramId string `json:"raydiumProgramId"`
@@ -35,9 +40,11 @@ type Config struct {
 
 		RemoveScamTokens struct {
 			MinMarketCap int `json:"minMarketCap"`
-			MinAgeHours   int `json:"minAgeHours"`
+			MinAgeHours  int `json:"minAgeHours"`
 		} `json:"removeScamTokens"`
 	} `json:"engine"`
 
 	DexScreener DexScreenerConfig `json:"dexscreener"`
+
+	Wallet WalletConfig `json:"wallet"`
 }

@@ -4,3 +4,4 @@ config.json
 dexscreener/*.json
 helius/*.json
 *.txt
+bin

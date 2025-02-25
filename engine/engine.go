@@ -296,13 +296,15 @@ func (e *Engine) Start() {
 
 func New(c *config.Config) *Engine {
 
+	hhc := helius.NewHttpClient(&c.Helius)
+
 	return &Engine{
 		db:     db.New(c.Engine.DSN),
 		hs:     helius.NewStreamer(&c.Helius),
-		hhc:    helius.NewHttpClient(&c.Helius),
+		hhc:    hhc,
 		config: c,
 		ds:     dexscreener.New(&c.DexScreener),
-		w:      wallet.New(&c.Wallet),
+		w:      wallet.New(&c.Wallet, hhc),
 	}
 
 }

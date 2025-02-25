@@ -4,8 +4,14 @@ type GetParsedTxReqBody struct {
 	Transactions []string `json:"transactions"`
 }
 
+type BaseRPCBody struct {
+	ID      string `json:"id"`
+	JsonRPC string `json:"jsonrpc"`
+	Method  string `json:"method"`
+}
+
 type ParsedTx struct {
-	Signature string `json:"signature"`
+	Signature    string `json:"signature"`
 	Instructions []struct {
 		Data              string   `json:"data"`
 		ProgramId         string   `json:"programId"`
@@ -19,9 +25,8 @@ type ParsedTx struct {
 }
 
 type LogSubscribeMessage struct {
-	JsonRPC string        `json:"jsonrpc"`
-	Method  string        `json:"logsNotification"`
-	Params  messageParams `json:"params"`
+	BaseRPCBody
+	Params messageParams `json:"params"`
 }
 
 type messageParams struct {
@@ -38,4 +43,21 @@ type result struct {
 		Signature string   `json:"signature"`
 		Logs      []string `json:"logs"`
 	} `json:"value"`
+}
+
+type GetBalanceRequestBody struct {
+	BaseRPCBody
+	Params []string `json:"params"`
+}
+
+type GetBalanceResponseBody struct {
+	Jsonrpc string `json:"jsonrpc"`
+	Result  struct {
+		Context struct {
+			APIVersion string `json:"apiVersion"`
+			Slot       int    `json:"slot"`
+		} `json:"context"`
+		Value int `json:"value"`
+	} `json:"result"`
+	ID string `json:"id"`
 }

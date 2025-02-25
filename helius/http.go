@@ -59,6 +59,43 @@ func (h *HttpClient) GetParsedTxs(signatures []string) ([]ParsedTx, error) {
 
 }
 
+// returns the balance in lamports
+func (h *HttpClient) GetBalance(address string) int {
+	url := fmt.Sprintf("%s?api-key=%s", h.config.RpcUrl, h.config.ApiKey)
+
+	reqBody, err := json.Marshal(GetBalanceRequestBody{
+		BaseRPCBody: BaseRPCBody{
+			ID:      "1",
+			JsonRPC: "2.0",
+			Method:  "getBalance",
+		},
+		Params: []string{address},
+	})
+
+	if err != nil {
+		log.Println("GetBalance: Failed to marshal body", err)
+
+		return 0
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+
+	if err != nil {
+		log.Println("GetBalance: Failed to Get url", err)
+
+		return 0
+	}
+
+	defer resp.Body.Close()
+
+	var responseBody GetBalanceResponseBody
+
+	json.NewDecoder(resp.Body).Decode(&responseBody)
+
+	return responseBody.Result.Value
+
+}
+
 func NewHttpClient(c *config.HeliusConfig) *HttpClient {
 	return &HttpClient{config: c}
 }

@@ -5,3 +5,4 @@ dexscreener/*.json
 helius/*.json
 *.txt
 bin
+.DS_Store

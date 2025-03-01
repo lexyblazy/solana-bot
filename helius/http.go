@@ -65,7 +65,7 @@ func (h *HttpClient) GetBalance(address string) int {
 
 	reqBody, err := json.Marshal(GetBalanceRequestBody{
 		BaseRPCBody: BaseRPCBody{
-			ID:      "1",
+			ID:      1,
 			JsonRPC: "2.0",
 			Method:  "getBalance",
 		},

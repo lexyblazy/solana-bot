@@ -105,7 +105,7 @@ func (e *Engine) handleLogSubscribeMessage(message []byte) {
 	err := json.Unmarshal(message, &m)
 
 	if err != nil {
-		log.Println("Failed to Unmarshal message")
+		log.Printf("Failed to Unmarshal message  %s, %s\n", string(message), err)
 
 		return
 

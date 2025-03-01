@@ -5,7 +5,7 @@ type GetParsedTxReqBody struct {
 }
 
 type BaseRPCBody struct {
-	ID      string `json:"id"`
+	ID      int `json:"id"`
 	JsonRPC string `json:"jsonrpc"`
 	Method  string `json:"method"`
 }

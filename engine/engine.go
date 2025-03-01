@@ -158,11 +158,12 @@ func (e *Engine) RemoveScamTokens() {
 	scamTokensConfig := e.config.Engine.RemoveScamTokens
 
 	for {
-		log.Printf("RemoveScamTokens: Removing scam tokens where marketCap < $%v and older than %v hours \n",
-			scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 
 		scamTokens := e.db.GetScamTokens(scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 		if len(scamTokens) > 0 {
+
+			log.Printf("RemoveScamTokens: Removing scam tokens where marketCap < $%v and older than %v hours \n",
+				scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 
 			e.db.DeleteTokens(scamTokens)
 		}

@@ -18,8 +18,8 @@ type WalletConfig struct {
 }
 
 type JupiterConfig struct {
-	BaseUrl string `json:"baseUrl"`
-	SlippageBps int `json:"slippageBps"`
+	BaseUrl     string `json:"baseUrl"`
+	SlippageBps int    `json:"slippageBps"`
 }
 
 type Config struct {
@@ -30,6 +30,8 @@ type Config struct {
 
 	Solana struct {
 		NativeMint string `json:"nativeMint"`
+		UsdtMint   string `json:"usdtMint"`
+		UsdcMint   string `json:"usdcMint"`
 	} `json:"solana"`
 
 	Helius HeliusConfig `json:"helius"`

@@ -1,6 +1,7 @@
 .qodo
-sniper.db
+*.db
 config.json
+trades.json
 dexscreener/*.json
 helius/*.json
 jupiter/*.json

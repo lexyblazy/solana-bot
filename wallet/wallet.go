@@ -16,7 +16,7 @@ const (
 
 type WalletClient struct {
 	privKey   solana.PrivateKey
-	publicKey string
+	PublicKey string
 	h         *helius.HttpClient
 }
 
@@ -35,13 +35,13 @@ func New(c *config.WalletConfig, h *helius.HttpClient) *WalletClient {
 
 	return &WalletClient{
 		privKey:   pkey,
-		publicKey: c.Pubkey,
+		PublicKey: c.Pubkey,
 		h:         h,
 	}
 }
 
 func (w *WalletClient) GetBalance() int {
-	balLamport := w.h.GetBalance(w.publicKey)
+	balLamport := w.h.GetBalance(w.PublicKey)
 
 	balSol := float32(balLamport) / float32(LAMPORT)
 
@@ -53,7 +53,7 @@ func (w *WalletClient) GetBalance() int {
 
 func (w *WalletClient) GetTokenBalance(mint string) int {
 
-	result := w.h.GetTokenAccountsByOwner(w.publicKey, mint)
+	result := w.h.GetTokenAccountsByOwner(w.PublicKey, mint)
 
 	if result == nil {
 		return 0

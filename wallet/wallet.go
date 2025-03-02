@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gagliardetto/solana-go"
+	"github.com/mr-tron/base58"
 )
 
 const (
@@ -39,14 +40,14 @@ func New(c *config.WalletConfig, h *helius.HttpClient) *WalletClient {
 	}
 }
 
-func (w *WalletClient) GetBalance() float32 {
+func (w *WalletClient) GetBalance() int {
 	balLamport := w.h.GetBalance(w.publicKey)
 
 	balSol := float32(balLamport) / float32(LAMPORT)
 
-	log.Printf("Bal sol: %f", balSol)
+	log.Printf("Bal readable sol: %f", balSol)
 
-	return balSol
+	return balLamport
 
 }
 
@@ -73,5 +74,31 @@ func (w *WalletClient) GetTokenBalance(mint string) int {
 	}
 
 	return amount
+
+}
+
+func (w *WalletClient) CreateSignedTxMessage(message string) string {
+
+	tx, err := solana.TransactionFromBase64(message)
+
+	if err != nil {
+		log.Println("CreateTx: TransactionFromBase64", err)
+
+		return ""
+	}
+
+	tx.Sign(func(p solana.PublicKey) *solana.PrivateKey {
+		return &w.privKey
+	})
+
+	txBytes, err := tx.MarshalBinary()
+
+	if err != nil {
+		log.Println("CreateTx: MarshalBinary", err)
+
+		return ""
+	}
+
+	return base58.Encode(txBytes)
 
 }

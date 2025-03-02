@@ -3,6 +3,7 @@ sniper.db
 config.json
 dexscreener/*.json
 helius/*.json
+jupiter/*.json
 *.txt
 bin
 .DS_Store

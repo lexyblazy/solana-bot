@@ -17,6 +17,11 @@ type WalletConfig struct {
 	PrivKey string `json:"privateKey"`
 }
 
+type JupiterConfig struct {
+	BaseUrl string `json:"baseUrl"`
+	SlippageBps int `json:"slippageBps"`
+}
+
 type Config struct {
 	LiquidityPool struct {
 		RaydiumProgramId string `json:"raydiumProgramId"`
@@ -52,4 +57,6 @@ type Config struct {
 	DexScreener DexScreenerConfig `json:"dexscreener"`
 
 	Wallet WalletConfig `json:"wallet"`
+
+	Jupiter JupiterConfig `json:"jupiter"`
 }

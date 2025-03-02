@@ -234,14 +234,44 @@ func (s *SqlClient) DeleteTokens(addresses []string) {
 	log.Printf("DeleteTokens: Deleted %d tokens \n", len(addresses))
 }
 
-func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int) []TokenEntity {
+func (s *SqlClient) GetTopTokens(marketCap int) []TokenEntity {
+	var tokens []TokenEntity
+
+	query := `select t."contractAddress" from  tokens t where t."marketCap" > ?`
+
+	rows, err := s.db.Query(query, marketCap)
+
+	if err != nil {
+		log.Println("GetTopTokens:", err)
+
+		return tokens
+	}
+
+	for rows.Next() {
+
+		var token TokenEntity
+		err = rows.Scan(&token.ContractAddress)
+
+		if err != nil {
+			log.Println("GetTokensForProcessing:", err)
+			break
+		}
+
+		tokens = append(tokens, token)
+	}
+
+	return tokens
+
+}
+
+func (s *SqlClient) GetTokensForProcessing(limit int, frequencyMinutes int, minMarketCap int) []TokenEntity {
 	var tokens []TokenEntity
 
 	minThreshold := time.Now().UnixMilli() - int64(frequencyMinutes)*time.Minute.Milliseconds()
 
-	query := `select t."contractAddress" from  tokens t where t."lastProcessedAt" is null or t.lastProcessedAt < ? LIMIT ?`
+	query := `select t."contractAddress" from  tokens t where t."marketCap" < ? AND (t."lastProcessedAt" is null OR t.lastProcessedAt < ?) LIMIT ?`
 
-	rows, err := s.db.Query(query, minThreshold, limit)
+	rows, err := s.db.Query(query, minMarketCap, minThreshold, limit)
 
 	if err != nil {
 		log.Println("GetTokensForProcessing:", err)

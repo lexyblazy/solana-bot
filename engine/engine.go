@@ -120,30 +120,56 @@ func (e *Engine) handleLogSubscribeMessage(message []byte) {
 	}
 }
 
+func (e *Engine) RefreshTopTokensMetadata() {
+	c := e.config.Engine.RefreshTopTokens
+	batchSize := e.config.Engine.RefreshTokenMetadata.BatchSize
+
+	for {
+		tokens := e.db.GetTopTokens(c.MinMarketCap)
+
+		if len(tokens) > 0 {
+			log.Printf("Found %d top tokens ", len(tokens))
+
+			for i := 0; i < len(tokens); i += batchSize {
+				e.refreshTokensMetadata(tokens[i : i+batchSize])
+				time.Sleep(1 * time.Second) // buffer to avoid being rate-limited by dexscreener
+			}
+
+		}
+
+		time.Sleep(time.Duration(c.FrequencySeconds) * time.Second)
+	}
+}
+
+func (e *Engine) refreshTokensMetadata(tokens []db.TokenEntity) {
+
+	addresses := []string{}
+
+	for _, token := range tokens {
+		addresses = append(addresses, token.ContractAddress)
+	}
+	dexScreenerTokens := e.ds.GetTokenByAddress(addresses)
+
+	if len(dexScreenerTokens) > 0 {
+		e.db.UpdateTokenData(dexScreenerTokens)
+		log.Printf("refreshTokensMetadata: Updated token metadata for %d tokens \n", len(dexScreenerTokens))
+	}
+
+	e.db.UpdateTokensAsProcessed(addresses)
+}
+
 func (e *Engine) RefreshTokensMetadata() {
 
 	refreshConfig := e.config.Engine.RefreshTokenMetadata
+	minMarketCap := e.config.Engine.RefreshTopTokens.MinMarketCap
 
 	for {
-		addresses := []string{}
-		tokens := e.db.GetTokensForProcessing(refreshConfig.BatchSize, refreshConfig.FrequencyMinutes)
+		tokens := e.db.GetTokensForProcessing(refreshConfig.BatchSize, refreshConfig.FrequencyMinutes, minMarketCap)
 
 		if len(tokens) > 0 {
 			log.Printf("RefreshTokensMetadata: Retrieved %d tokens from db for processing \n", len(tokens))
 
-			for _, token := range tokens {
-				addresses = append(addresses, token.ContractAddress)
-			}
-
-			dexScreenerTokens := e.ds.GetTokenByAddress(addresses)
-			log.Printf("RefreshTokensMetadata: Retrieved %d tokens from dexscreener \n", len(dexScreenerTokens))
-
-			if len(dexScreenerTokens) > 0 {
-				e.db.UpdateTokenData(dexScreenerTokens)
-				log.Printf("RefreshTokensMetadata: Updated token metadata for %d tokens \n", len(dexScreenerTokens))
-			}
-
-			e.db.UpdateTokensAsProcessed(addresses)
+			e.refreshTokensMetadata(tokens)
 		} else {
 			log.Printf("RefreshTokensMetadata: is configured for every  %d minutes. You can adjust the schedule \n", refreshConfig.FrequencyMinutes)
 		}
@@ -280,9 +306,15 @@ func (e *Engine) GetRugsReport() {
 
 func (e *Engine) Start() {
 
-	go e.RemoveScamTokens()
+	// process RPC Logs
 	go e.ProcessLogs()
 	go e.DeleteProcessedLogs()
+
+	// Delete scam tokens
+	go e.RemoveScamTokens()
+
+	// refresh token metadata
+	go e.RefreshTopTokensMetadata()
 	go e.RefreshTokensMetadata()
 
 	// subscribe to helius websocket streaming

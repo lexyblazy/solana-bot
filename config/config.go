@@ -34,7 +34,7 @@ type Config struct {
 		LogBatchSize int    `json:"processLogBatchSize"`
 
 		RefreshTokenMetadata struct {
-			BatchSize        int `json:"batchSize"`
+			BatchSize        int `json:"batchSize"` // this is a dexscreener limitation
 			FrequencyMinutes int `json:"frequencyMinutes"`
 		} `json:"refreshTokenMetadata"`
 
@@ -42,6 +42,11 @@ type Config struct {
 			MinMarketCap int `json:"minMarketCap"`
 			MinAgeHours  int `json:"minAgeHours"`
 		} `json:"removeScamTokens"`
+
+		RefreshTopTokens struct {
+			MinMarketCap     int `json:"minMarketCap"`
+			FrequencySeconds int `json:"frequencySeconds"`
+		} `json:"refreshTopTokens"`
 	} `json:"engine"`
 
 	DexScreener DexScreenerConfig `json:"dexscreener"`

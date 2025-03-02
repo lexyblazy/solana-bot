@@ -37,7 +37,10 @@ Two things are done with the data returned from Dexscreener:
  - Insert a `market_data` record which is intended for tracking market data of the token
 
 ```go
-    go e.RefreshTokensMetadata()
+    // targets tokens above a certain marketCap
+    go e.RefreshTopTokensMetadata()
+    // target tokens below the set marketCap
+	go e.RefreshTokensMetadata()
 ```
 
 ### 4. Run jobs to delete Processed log events and scam tokens

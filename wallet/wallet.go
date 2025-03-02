@@ -4,6 +4,7 @@ import (
 	"log"
 	"solana-bot/config"
 	"solana-bot/helius"
+	"strconv"
 
 	"github.com/gagliardetto/solana-go"
 )
@@ -46,5 +47,31 @@ func (w *WalletClient) GetBalance() float32 {
 	log.Printf("Bal sol: %f", balSol)
 
 	return balSol
+
+}
+
+func (w *WalletClient) GetTokenBalance(mint string) int {
+
+	result := w.h.GetTokenAccountsByOwner(w.publicKey, mint)
+
+	if result == nil {
+		return 0
+	}
+
+	amount := 0
+
+	for _, v := range result.Result.Value {
+		if v.Account.Data.Parsed.Info.Mint == mint {
+			val, err := strconv.Atoi(v.Account.Data.Parsed.Info.TokenAmount.Amount)
+
+			if err != nil {
+				log.Println("Err converting tokenAmount to integer", err)
+			} else {
+				amount = val
+			}
+		}
+	}
+
+	return amount
 
 }

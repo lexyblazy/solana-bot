@@ -106,3 +106,9 @@ type GetTokenAccountsByOwnerResponseBody struct {
 	} `json:"result"`
 	ID int `json:"id"`
 }
+
+type SendTransactionResponse struct {
+	Jsonrpc string `json:"jsonrpc"`
+	Result  string `json:"result"`
+	ID      int    `json:"id"`
+}

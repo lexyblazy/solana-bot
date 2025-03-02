@@ -142,6 +142,44 @@ func (h *HttpClient) GetTokenAccountsByOwner(address, mint string) *GetTokenAcco
 	json.NewDecoder(resp.Body).Decode(&result)
 
 	return &result
+}
+
+func (h *HttpClient) SendTransaction(txMsg string) string {
+	url := fmt.Sprintf("%s?api-key=%s", h.config.RpcUrl, h.config.ApiKey)
+
+	reqBody, err := json.Marshal(struct {
+		BaseRPCBody
+		Params []string `json:"params"`
+	}{
+		BaseRPCBody: BaseRPCBody{
+			ID:      1,
+			JsonRPC: "2.0",
+			Method:  "sendTransaction",
+		},
+		Params: []string{txMsg},
+	})
+
+	if err != nil {
+		log.Println("SendTransaction: Failed to marshal body", err)
+
+		return ""
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+
+	if err != nil {
+		log.Println("SendTransaction: Failed to Post to url", err)
+
+		return ""
+	}
+
+	defer resp.Body.Close()
+
+	var result SendTransactionResponse
+
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	return result.Result
 
 }
 

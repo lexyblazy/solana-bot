@@ -304,14 +304,12 @@ func (e *Engine) GetRugsReport() {
 
 }
 
-func ToString(v interface{}) string {
-	b, _ := json.Marshal(v)
 
-	return (string(b))
-}
 
 func (e *Engine) Start() {
 
+	// start trading engine
+	go e.t.Start()
 	// process RPC Logs
 	go e.ProcessLogs()
 	go e.DeleteProcessedLogs()
@@ -339,11 +337,12 @@ func New(c *config.Config) *Engine {
 	hs := helius.NewStreamer(&c.Helius)
 	w := wallet.New(&c.Wallet, hhc)
 	j := jupiter.New(&c.Jupiter)
+	db := db.New(c.Engine.DSN)
 
-	t := NewTrader(w, j, hhc, c)
+	t := NewTrader(w, j, hhc, c, db)
 
 	return &Engine{
-		db:     db.New(c.Engine.DSN),
+		db:     db,
 		hs:     hs,
 		hhc:    hhc,
 		config: c,

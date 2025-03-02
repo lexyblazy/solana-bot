@@ -1,20 +1,24 @@
 package engine
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"solana-bot/config"
+	"solana-bot/db"
 	"solana-bot/helius"
 	"solana-bot/jupiter"
 	"solana-bot/wallet"
 )
 
 type Trader struct {
-	c *config.Config
-	h *helius.HttpClient
-	j *jupiter.Client
-	w *wallet.WalletClient
+	c  *config.Config
+	db *db.SqlClient
+	h  *helius.HttpClient
+	j  *jupiter.Client
+	w  *wallet.WalletClient
 }
 
 type SwapTokenParams struct {
@@ -113,6 +117,35 @@ func (t *Trader) Demo() {
 	t.SellToken(t.c.Solana.UsdcMint, 0.000057)
 }
 
-func NewTrader(w *wallet.WalletClient, j *jupiter.Client, h *helius.HttpClient, c *config.Config) *Trader {
-	return &Trader{w: w, j: j, h: h, c: c}
+func (t *Trader) LoadTrades() {
+	file, err := os.Open("./trades.json")
+
+	if err != nil {
+		log.Println("Failed open trades.json file")
+		return
+	}
+
+	var swapTrades []Trades
+
+	json.NewDecoder(file).Decode(&swapTrades)
+
+	for _, st := range swapTrades {
+		if st.Buy != nil {
+
+			t.db.InsertBuyOrder(*st.Buy)
+		}
+		
+		if st.Sell != nil {
+			t.db.InsertSellOrder(*st.Sell)
+		}
+	}
+
+}
+
+func (t *Trader) Start() {
+	t.LoadTrades()
+}
+
+func NewTrader(w *wallet.WalletClient, j *jupiter.Client, h *helius.HttpClient, c *config.Config, db *db.SqlClient) *Trader {
+	return &Trader{w: w, j: j, h: h, c: c, db: db}
 }

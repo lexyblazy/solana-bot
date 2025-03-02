@@ -50,3 +50,38 @@ type GetQuoteResponse struct {
 	SwapUsdValue     string  `json:"swapUsdValue"`
 	SimplerRouteUsed bool    `json:"simplerRouteUsed"`
 }
+
+type BuildSwapTransactionRequestBody struct {
+	QuoteResponse           GetQuoteResponse `json:"quoteResponse"`
+	UserPublicKey           string           `json:"userPublicKey"`
+	DynamicComputeUnitLimit bool             `json:"dynamicComputeUnitLimit"`
+	DynamicSlippage         bool             `json:"dynamicSlippage"`
+}
+
+type BuildSwapTransactionResponseBody struct {
+	SwapTransaction           string `json:"swapTransaction"`
+	LastValidBlockHeight      int    `json:"lastValidBlockHeight"`
+	PrioritizationFeeLamports int    `json:"prioritizationFeeLamports"`
+	ComputeUnitLimit          int    `json:"computeUnitLimit"`
+	PrioritizationType        struct {
+		ComputeBudget struct {
+			MicroLamports          int `json:"microLamports"`
+			EstimatedMicroLamports int `json:"estimatedMicroLamports"`
+		} `json:"computeBudget"`
+	} `json:"prioritizationType"`
+	SimulationSlot        int `json:"simulationSlot"`
+	DynamicSlippageReport struct {
+		SlippageBps                  int         `json:"slippageBps"`
+		OtherAmount                  int         `json:"otherAmount"`
+		SimulatedIncurredSlippageBps int         `json:"simulatedIncurredSlippageBps"`
+		AmplificationRatio           interface{} `json:"amplificationRatio"`
+		CategoryName                 string      `json:"categoryName"`
+		HeuristicMaxSlippageBps      int         `json:"heuristicMaxSlippageBps"`
+		RtseSlippageBps              int         `json:"rtseSlippageBps"`
+		FailedTxnEstSlippage         int         `json:"failedTxnEstSlippage"`
+		PriceMovementEstSlippage     int         `json:"priceMovementEstSlippage"`
+		EmaEstSlippage               int         `json:"emaEstSlippage"`
+	} `json:"dynamicSlippageReport"`
+	SimulationError               interface{} `json:"simulationError"`
+	AddressesByLookupTableAddress interface{} `json:"addressesByLookupTableAddress"`
+}

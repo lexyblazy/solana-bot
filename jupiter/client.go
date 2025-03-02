@@ -1,6 +1,7 @@
 package jupiter
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -30,6 +31,39 @@ func (c *Client) GetQuote(params GetQuoteParams) *GetQuoteResponse {
 	json.NewDecoder(resp.Body).Decode(&quote)
 
 	return &quote
+
+}
+
+func (c *Client) BuildSwapTransaction(quote *GetQuoteResponse, publicKey string) *BuildSwapTransactionResponseBody {
+
+	body, err := json.Marshal(BuildSwapTransactionRequestBody{
+		QuoteResponse:           *quote,
+		UserPublicKey:           publicKey,
+		DynamicComputeUnitLimit: true,
+		DynamicSlippage:         true,
+	})
+
+	if err != nil {
+		log.Println("failed to json.Marshal body", err)
+		return nil
+	}
+
+	url := fmt.Sprintf("%s/swap/v1/swap", c.config.BaseUrl)
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(body))
+
+	if err != nil {
+		log.Println("BuildSwapTransaction: Api call failed", err)
+
+		return nil
+	}
+	defer resp.Body.Close()
+
+	var result BuildSwapTransactionResponseBody
+
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	return &result
 
 }
 

@@ -16,6 +16,7 @@ import (
 	"solana-bot/db"
 	"solana-bot/dexscreener"
 	"solana-bot/helius"
+	"solana-bot/jupiter"
 	"solana-bot/wallet"
 
 	"strings"
@@ -31,6 +32,8 @@ type Engine struct {
 	hhc    *helius.HttpClient
 	ds     *dexscreener.Client
 	config *config.Config
+	j      *jupiter.Client
+	t      *Trader
 }
 
 func (e *Engine) DeleteProcessedLogs() {
@@ -301,6 +304,12 @@ func (e *Engine) GetRugsReport() {
 
 }
 
+func ToString(v interface{}) string {
+	b, _ := json.Marshal(v)
+
+	return (string(b))
+}
+
 func (e *Engine) Start() {
 
 	// process RPC Logs
@@ -327,14 +336,21 @@ func (e *Engine) Start() {
 func New(c *config.Config) *Engine {
 
 	hhc := helius.NewHttpClient(&c.Helius)
+	hs := helius.NewStreamer(&c.Helius)
+	w := wallet.New(&c.Wallet, hhc)
+	j := jupiter.New(&c.Jupiter)
+
+	t := NewTrader(w, j, hhc, c)
 
 	return &Engine{
 		db:     db.New(c.Engine.DSN),
-		hs:     helius.NewStreamer(&c.Helius),
+		hs:     hs,
 		hhc:    hhc,
 		config: c,
 		ds:     dexscreener.New(&c.DexScreener),
-		w:      wallet.New(&c.Wallet, hhc),
+		w:      w,
+		j:      j,
+		t:      t,
 	}
 
 }

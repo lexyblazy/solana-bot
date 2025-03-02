@@ -87,23 +87,13 @@ func (s *SqlClient) UpdateTokensAsProcessed(addresses []string) {
 	var params []interface{}
 	params = append(params, time.Now().UnixMilli()) // add the lastProcessedAt to the values list
 	params = append(params, toInterfaceSlice(addresses)...)
-	result, err := s.db.Exec(query, params...)
+	_, err := s.db.Exec(query, params...)
 
 	if err != nil {
 		log.Println("UpdateTokensAsProcessed Query:", err)
 
 		return
 	}
-
-	count, err := result.RowsAffected()
-
-	if err != nil {
-		log.Println("UpdateTokensAsProcessed RowsAffected:", err)
-
-		return
-	}
-
-	log.Printf("UpdateTokensAsProcessed: updated %d tokens \n", count)
 
 }
 

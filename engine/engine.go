@@ -152,7 +152,6 @@ func (e *Engine) refreshTokensMetadata(tokens []db.TokenEntity) {
 
 	if len(dexScreenerTokens) > 0 {
 		e.db.UpdateTokenData(dexScreenerTokens)
-		log.Printf("refreshTokensMetadata: Updated token metadata for %d tokens \n", len(dexScreenerTokens))
 	}
 
 	e.db.UpdateTokensAsProcessed(addresses)
@@ -170,8 +169,6 @@ func (e *Engine) RefreshTokensMetadata() {
 			log.Printf("RefreshTokensMetadata: Retrieved %d tokens from db for processing \n", len(tokens))
 
 			e.refreshTokensMetadata(tokens)
-		} else {
-			log.Printf("RefreshTokensMetadata: is configured for every  %d minutes. You can adjust the schedule \n", refreshConfig.FrequencyMinutes)
 		}
 
 		time.Sleep(5 * time.Second)

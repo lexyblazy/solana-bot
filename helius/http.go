@@ -59,7 +59,7 @@ func (h *HttpClient) GetParsedTxs(signatures []string) ([]ParsedTx, error) {
 
 }
 
-// returns the balance in lamports
+// returns the sol balance in lamports
 func (h *HttpClient) GetBalance(address string) int {
 	url := fmt.Sprintf("%s?api-key=%s", h.config.RpcUrl, h.config.ApiKey)
 
@@ -93,6 +93,55 @@ func (h *HttpClient) GetBalance(address string) int {
 	json.NewDecoder(resp.Body).Decode(&responseBody)
 
 	return responseBody.Result.Value
+
+}
+
+func (h *HttpClient) GetTokenAccountsByOwner(address, mint string) *GetTokenAccountsByOwnerResponseBody {
+	url := fmt.Sprintf("%s?api-key=%s", h.config.RpcUrl, h.config.ApiKey)
+
+	var params []interface{}
+
+	params = append(params, address)
+	params = append(params, struct {
+		Mint string `json:"mint"`
+	}{
+		Mint: mint,
+	}, struct {
+		Encoding string `json:"encoding"`
+	}{
+		Encoding: "jsonParsed",
+	})
+
+	reqBody, err := json.Marshal(GetTokenAccountsByOwnerRequestBody{
+		BaseRPCBody: BaseRPCBody{
+			ID:      1,
+			JsonRPC: "2.0",
+			Method:  "getTokenAccountsByOwner",
+		},
+		Params: params,
+	})
+
+	if err != nil {
+		log.Println("GetTokenAccountsByOwner: Failed to marshal body", err)
+
+		return nil
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+
+	if err != nil {
+		log.Println("GetTokenAccountsByOwner: Failed to Get url", err)
+
+		return nil
+	}
+
+	defer resp.Body.Close()
+
+	var result GetTokenAccountsByOwnerResponseBody
+
+	json.NewDecoder(resp.Body).Decode(&result)
+
+	return &result
 
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"solana-bot/dexscreener"
+	"solana-bot/utils"
 	"strings"
 	"time"
 
@@ -367,6 +368,59 @@ func (s *SqlClient) UpdateTokenData(tokens []dexscreener.TokensByAddress) {
 		go s.updateTokenMetadata(token)
 
 	}
+}
+
+func (s *SqlClient) InsertBuyOrder(st *SwapTradeEntity) {
+
+	query := `insert into swap_orders("fromToken", "toToken", "amountDetails") VALUES (?, ?, ?)`
+
+	_, err := s.db.Exec(query, st.FromToken, st.ToToken, utils.ToString(st.AmountDetails))
+
+	if err != nil {
+		log.Println("InsertBuyOrder:", err)
+
+		return
+	}
+
+	log.Print("InsertBuyOrder DONE!")
+
+}
+
+func (s *SqlClient) InsertSellOrder(st *SwapTradeEntity) {
+	query := `insert into swap_orders("fromToken", "toToken", "rules") VALUES (?, ?, ?)`
+
+	_, err := s.db.Exec(query, st.FromToken, st.ToToken, utils.ToString(st.Rules))
+
+	if err != nil {
+		log.Println("InsertSellOrder:", err)
+
+		return
+	}
+
+	log.Print("InsertSellOrder DONE!")
+
+}
+
+func (s *SqlClient) GetPendingTrades() []SwapTradeEntity {
+	query := `select id, fromToken, toToken, amountDetails, rules from swap_orders sp where sp."executedAt" is null`
+
+	rows, err := s.db.Query(query)
+
+	if err != nil {
+		log.Print("GetPendingTrades: dbQuery Error", err)
+	}
+
+	var trades []SwapTradeEntity
+
+	for rows.Next() {
+		var trade SwapTradeEntity
+		rows.Scan(&trade.Id, &trade.FromToken, &trade.ToToken, &trade.AmountDetails, &trade.Rules)
+
+		trades = append(trades, trade)
+	}
+
+	return trades
+
 }
 
 func New(dbPath string) *SqlClient {

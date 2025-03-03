@@ -31,3 +31,27 @@ type MarketDataEntity struct {
 	PriceUsd        float64
 	ContractAddress string
 }
+
+type SwapRules struct {
+	TakeProfit float32 `json:"takeProfit"`
+	StopLoss   float32 `json:"stopLoss"`
+}
+
+type AmountDetails struct {
+	QuantitySol float32 `json:"quantitySol"`
+}
+
+type SwapTradeEntity struct {
+	Id              uint64 `json:"id"`
+	CreatedAt       time.Time
+	LastProcessedAt *time.Time // nullable field
+	ExecutedAt      *time.Time // nullable field
+
+	FromToken string `json:"fromToken"`
+	ToToken   string `json:"toToken"`
+
+	TxHash *string    // nullable field
+	Rules  *SwapRules `json:"rules"` // nullable field
+
+	AmountDetails *AmountDetails `json:"amountDetails"` // nullable field
+}

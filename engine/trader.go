@@ -11,6 +11,8 @@ import (
 	"solana-bot/helius"
 	"solana-bot/jupiter"
 	"solana-bot/wallet"
+	"sync"
+	"time"
 )
 
 type Trader struct {
@@ -19,6 +21,9 @@ type Trader struct {
 	h  *helius.HttpClient
 	j  *jupiter.Client
 	w  *wallet.WalletClient
+
+	cache map[uint64]bool
+	mu    sync.Mutex
 }
 
 type SwapTokenParams struct {
@@ -58,6 +63,27 @@ func (t *Trader) BuyToken(mintAddress string, amountSol float32) {
 		OutputMint: mintAddress,
 		Amount:     amountLamport,
 	})
+}
+
+func (t *Trader) acquireLock(id uint64) bool {
+	// check if the id is in the cache
+	_, ok := t.cache[id]
+	if ok {
+		// it is already locked
+		return false
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.cache[id] = true
+
+	return true
+}
+
+func (t *Trader) releaseLock(id uint64) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	delete(t.cache, id)
 }
 
 func (t *Trader) SellToken(mintAddress string, amountToken float32) {
@@ -131,21 +157,29 @@ func (t *Trader) LoadTrades() {
 
 	for _, st := range swapTrades {
 		if st.Buy != nil {
-
-			t.db.InsertBuyOrder(*st.Buy)
+			t.db.InsertBuyOrder(st.Buy)
 		}
-		
+
 		if st.Sell != nil {
-			t.db.InsertSellOrder(*st.Sell)
+			t.db.InsertSellOrder(st.Sell)
 		}
 	}
 
 }
 
 func (t *Trader) Start() {
-	t.LoadTrades()
+	// t.LoadTrades()
+
+	go t.ProcessPendingTrades()
 }
 
 func NewTrader(w *wallet.WalletClient, j *jupiter.Client, h *helius.HttpClient, c *config.Config, db *db.SqlClient) *Trader {
-	return &Trader{w: w, j: j, h: h, c: c, db: db}
+	return &Trader{
+		w:     w,
+		j:     j,
+		h:     h,
+		c:     c,
+		db:    db,
+		cache: make(map[uint64]bool),
+	}
 }

@@ -38,6 +38,7 @@ type Engine struct {
 
 func (e *Engine) DeleteProcessedLogs() {
 	for {
+		log.Println("DeleteProcessedLogs: Running")
 		e.db.DeleteLogs()
 		time.Sleep(30 * time.Second)
 	}
@@ -46,6 +47,7 @@ func (e *Engine) DeleteProcessedLogs() {
 func (e *Engine) ProcessLogs() {
 
 	for {
+		log.Println("ProcessLogs: Running")
 		logs := e.db.GetUnProcessedLogs(100)
 
 		logBatchSize := int(e.config.Engine.LogBatchSize)
@@ -128,6 +130,7 @@ func (e *Engine) RefreshTopTokensMetadata() {
 	batchSize := e.config.Engine.RefreshTokenMetadata.BatchSize
 
 	for {
+		log.Println("RefreshTopTokensMetadata... Running")
 		tokens := e.db.GetTopTokens(c.MinMarketCap)
 
 		if len(tokens) > 0 {
@@ -166,6 +169,8 @@ func (e *Engine) RefreshTokensMetadata() {
 	minMarketCap := e.config.Engine.RefreshTopTokens.MinMarketCap
 
 	for {
+		log.Println("RefreshTokensMetadata: Running")
+
 		tokens := e.db.GetTokensForProcessing(refreshConfig.BatchSize, refreshConfig.FrequencyMinutes, minMarketCap)
 
 		if len(tokens) > 0 {
@@ -185,11 +190,11 @@ func (e *Engine) RemoveScamTokens() {
 
 	for {
 
+		log.Printf("RemoveScamTokens: Removing scam tokens where marketCap < $%v and older than %v hours \n",
+			scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
+
 		scamTokens := e.db.GetScamTokens(scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 		if len(scamTokens) > 0 {
-
-			log.Printf("RemoveScamTokens: Removing scam tokens where marketCap < $%v and older than %v hours \n",
-				scamTokensConfig.MinMarketCap, scamTokensConfig.MinAgeHours)
 
 			e.db.DeleteTokens(scamTokens)
 		}
@@ -303,8 +308,6 @@ func (e *Engine) GetRugsReport() {
 	}
 
 }
-
-
 
 func (e *Engine) Start() {
 

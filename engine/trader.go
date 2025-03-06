@@ -143,7 +143,51 @@ func (t *Trader) Demo() {
 	t.SellToken(t.c.Solana.UsdcMint, 0.000057)
 }
 
-func (t *Trader) LoadTrades() {
+func (t *Trader) ProcessPendingTrades() {
+
+	for {
+		trades := t.db.GetPendingTrades()
+
+		if len(trades) > 0 {
+			fmt.Printf("ProcessPendingTrades: Found %v pending trades \n", len(trades))
+			for _, tr := range trades {
+				go t.ExecuteTrade(tr)
+			}
+		}
+
+		time.Sleep(1 * time.Minute)
+	}
+}
+
+func (t *Trader) ExecuteTrade(tr db.SwapTradeEntity) {
+
+	// acquire the lock
+	lock := t.acquireLock(tr.Id)
+
+	if !lock {
+		fmt.Printf("Id = %d is already locked for processing \n", tr.Id)
+
+		return
+	}
+
+	// for buy orders we set the amount
+	// for sell orders we only set the rules
+	if tr.AmountDetails != nil {
+		fmt.Println("this is a buy order")
+
+	} else if tr.Rules != nil {
+		fmt.Println("this is a sell order")
+
+	}
+	// simulate trade processing
+	time.Sleep(time.Second * 5)
+
+	// release lock after processing
+	t.releaseLock(tr.Id)
+
+}
+
+func (t *Trader) loadTrades() {
 	file, err := os.Open("./trades.json")
 
 	if err != nil {
@@ -168,9 +212,8 @@ func (t *Trader) LoadTrades() {
 }
 
 func (t *Trader) Start() {
-	// t.LoadTrades()
-
-	go t.ProcessPendingTrades()
+	// t.loadTrades()
+	t.ProcessPendingTrades()
 }
 
 func NewTrader(w *wallet.WalletClient, j *jupiter.Client, h *helius.HttpClient, c *config.Config, db *db.SqlClient) *Trader {

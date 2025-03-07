@@ -23,7 +23,7 @@ type Trader struct {
 	w  *wallet.WalletClient
 
 	cache map[uint64]bool
-	mu    sync.Mutex
+	mu    sync.RWMutex
 }
 
 type SwapTokenParams struct {
@@ -66,13 +66,19 @@ func (t *Trader) BuyToken(mintAddress string, amountSol float32) {
 }
 
 func (t *Trader) acquireLock(id uint64) bool {
+	// obtain a a readers locks
 	// check if the id is in the cache
+	t.mu.RLock()
 	_, ok := t.cache[id]
 	if ok {
-		// it is already locked
+		// it is in the cache for processing, skip
+		t.mu.RUnlock()
 		return false
 	}
+	t.mu.RUnlock()
 
+
+	// obtain a writers lock
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.cache[id] = true

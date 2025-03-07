@@ -65,20 +65,21 @@ func (t *Trader) BuyToken(mintAddress string, amountSol float32) {
 	})
 }
 
-func (t *Trader) acquireLock(id uint64) bool {
-	// obtain a a readers locks
-	// check if the id is in the cache
+func (t *Trader) isLocked(id uint64) bool {
+	// obtain a reader's lock
 	t.mu.RLock()
+	defer t.mu.RUnlock()
 	_, ok := t.cache[id]
-	if ok {
-		// it is in the cache for processing, skip
-		t.mu.RUnlock()
+
+	return ok
+}
+
+func (t *Trader) acquireLock(id uint64) bool {
+	if t.isLocked(id) {
 		return false
 	}
-	t.mu.RUnlock()
 
-
-	// obtain a writers lock
+	// obtain a writer's lock
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.cache[id] = true

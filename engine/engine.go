@@ -137,7 +137,7 @@ func (e *Engine) RefreshTopTokensMetadata() {
 			log.Printf("Found %d top tokens ", len(tokens))
 
 			for i := 0; i < len(tokens); i += batchSize {
-				e.refreshTokensMetadata(tokens[i : i+batchSize])
+				e.refreshTokensMetadata(tokens[i:min(i+batchSize, cap(tokens))])
 				time.Sleep(1 * time.Second) // buffer to avoid being rate-limited by dexscreener
 			}
 

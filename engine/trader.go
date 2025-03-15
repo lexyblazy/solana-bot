@@ -44,7 +44,8 @@ func (t *Trader) getTokenDecimals(mintAddress string) int {
 	return 9
 }
 
-func (t *Trader) BuyToken(mintAddress string, amountSol float32) {
+// A Buy is swapping native sol to the "meme" token address, a SwapFromNativeSol
+func (t *Trader) buyToken(mintAddress string, amountSol float32) {
 
 	exponential := float32(math.Pow(10, float64(t.getTokenDecimals(mintAddress))))
 	amountLamport := int(amountSol * exponential)
@@ -53,12 +54,12 @@ func (t *Trader) BuyToken(mintAddress string, amountSol float32) {
 
 	if bal < amountLamport {
 
-		log.Printf("BuyToken: Insufficient Balance, Expected >= %d, Got = %d \n", amountLamport, bal)
+		log.Printf("buyToken: Insufficient Balance, Expected >= %d, Got = %d \n", amountLamport, bal)
 
 		return
 	}
 
-	t.Swap(SwapTokenParams{
+	t.swap(SwapTokenParams{
 		InputMint:  t.c.Solana.NativeMint,
 		OutputMint: mintAddress,
 		Amount:     amountLamport,
@@ -93,7 +94,8 @@ func (t *Trader) releaseLock(id uint64) {
 	delete(t.cache, id)
 }
 
-func (t *Trader) SellToken(mintAddress string, amountToken float32) {
+// A Sell is swapping the "meme" token address to native sol, a SwapToNativeSol
+func (t *Trader) sellToken(mintAddress string, amountToken float32) {
 
 	exponential := float32(math.Pow(10, float64(t.getTokenDecimals(mintAddress))))
 	atomicUnit := int(amountToken * exponential)
@@ -108,7 +110,7 @@ func (t *Trader) SellToken(mintAddress string, amountToken float32) {
 		return
 	}
 
-	t.Swap(SwapTokenParams{
+	t.swap(SwapTokenParams{
 		InputMint:  mintAddress,
 		OutputMint: t.c.Solana.NativeMint,
 		Amount:     atomicUnit,
@@ -116,7 +118,7 @@ func (t *Trader) SellToken(mintAddress string, amountToken float32) {
 
 }
 
-func (t *Trader) Swap(params SwapTokenParams) (string, error) {
+func (t *Trader) swap(params SwapTokenParams) (string, error) {
 
 	quote := t.j.GetQuote(jupiter.GetQuoteParams{
 		InputMint:   params.InputMint,
@@ -145,12 +147,7 @@ func (t *Trader) Swap(params SwapTokenParams) (string, error) {
 
 }
 
-func (t *Trader) Demo() {
-	t.BuyToken(t.c.Solana.UsdcMint, 20)
-	t.SellToken(t.c.Solana.UsdcMint, 0.000057)
-}
-
-func (t *Trader) ProcessPendingTrades() {
+func (t *Trader) processPendingTrades() {
 
 	for {
 		trades := t.db.GetPendingTrades()
@@ -158,7 +155,7 @@ func (t *Trader) ProcessPendingTrades() {
 		if len(trades) > 0 {
 			fmt.Printf("ProcessPendingTrades: Found %v pending trades \n", len(trades))
 			for _, tr := range trades {
-				go t.ExecuteTrade(tr)
+				go t.executeTrade(tr)
 			}
 		}
 
@@ -166,7 +163,7 @@ func (t *Trader) ProcessPendingTrades() {
 	}
 }
 
-func (t *Trader) ExecuteTrade(tr db.SwapTradeEntity) {
+func (t *Trader) executeTrade(tr db.SwapTradeEntity) {
 
 	// acquire the lock
 	lock := t.acquireLock(tr.Id)
@@ -202,25 +199,19 @@ func (t *Trader) loadTrades() {
 		return
 	}
 
-	var swapTrades []Trades
+	var swapTrades []db.SwapTradeEntity
 
 	json.NewDecoder(file).Decode(&swapTrades)
 
 	for _, st := range swapTrades {
-		if st.Buy != nil {
-			t.db.InsertBuyOrder(st.Buy)
-		}
-
-		if st.Sell != nil {
-			t.db.InsertSellOrder(st.Sell)
-		}
+		t.db.InsertSwapOrder(st)
 	}
 
 }
 
 func (t *Trader) Start() {
 	// t.loadTrades()
-	t.ProcessPendingTrades()
+	t.processPendingTrades()
 }
 
 func NewTrader(w *wallet.WalletClient, j *jupiter.Client, h *helius.HttpClient, c *config.Config, db *db.SqlClient) *Trader {

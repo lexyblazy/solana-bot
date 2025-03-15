@@ -370,34 +370,37 @@ func (s *SqlClient) UpdateTokenData(tokens []dexscreener.TokensByAddress) {
 	}
 }
 
-func (s *SqlClient) InsertBuyOrder(st *SwapTradeEntity) {
+func (s *SqlClient) InsertSwapOrder(st SwapTradeEntity) {
 
-	query := `insert into swap_orders("fromToken", "toToken", "amountDetails") VALUES (?, ?, ?)`
+	query := `insert into swap_orders("fromToken", "toToken", "amountDetails", "rules") VALUES (?, ?, ?, ?)`
 
-	_, err := s.db.Exec(query, st.FromToken, st.ToToken, utils.ToString(st.AmountDetails))
+	var params []any
+
+	params = append(params, st.FromToken)
+	params = append(params, st.ToToken)
+
+	if st.AmountDetails != nil {
+		params = append(params, utils.ToString(st.AmountDetails))
+	} else {
+		params = append(params, nil)
+	}
+
+	if st.Rules != nil {
+		params = append(params, utils.ToString(st.Rules))
+	} else {
+		params = append(params, nil)
+
+	}
+
+	_, err := s.db.Exec(query, params...)
 
 	if err != nil {
-		log.Println("InsertBuyOrder:", err)
+		log.Println("InsertSwapOrder:", err)
 
 		return
 	}
 
-	log.Print("InsertBuyOrder DONE!")
-
-}
-
-func (s *SqlClient) InsertSellOrder(st *SwapTradeEntity) {
-	query := `insert into swap_orders("fromToken", "toToken", "rules") VALUES (?, ?, ?)`
-
-	_, err := s.db.Exec(query, st.FromToken, st.ToToken, utils.ToString(st.Rules))
-
-	if err != nil {
-		log.Println("InsertSellOrder:", err)
-
-		return
-	}
-
-	log.Print("InsertSellOrder DONE!")
+	log.Print("InsertSwapOrder DONE!")
 
 }
 

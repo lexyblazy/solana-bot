@@ -158,7 +158,7 @@ func (s *SqlClient) GetScamTokens(minMarketCap int, minAgeHours int) []string {
 
 	threshold := time.Now().UnixMilli() - int64(minAgeHours)*time.Hour.Milliseconds()
 
-	query := `select t.contractAddress from tokens t where t.marketCap < ? AND t.pairCreatedAt < ?`
+	query := `select t.contractAddress from tokens t where t.marketCap < ? AND t.pairCreatedAt < ? AND t.lastProcessedAt is not null`
 
 	rows, err := s.db.Query(query, minMarketCap, threshold)
 

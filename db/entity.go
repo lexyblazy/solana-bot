@@ -50,8 +50,8 @@ type SwapTradeEntity struct {
 	FromToken string `json:"fromToken"`
 	ToToken   string `json:"toToken"`
 
-	TxHash *string    // nullable field
-	Rules  *SwapRules `json:"rules"` // nullable field
+	TxHash *string // nullable field
+	Rules  *string `json:"rules"` // nullable field, stored as JSON string but will be deserialized to struct SwapRules
 
-	AmountDetails *AmountDetails `json:"amountDetails"` // nullable field
+	AmountDetails *string `json:"amountDetails"` // nullable field, stored as JSON string but will be deserialized to struct AmountDetails
 }

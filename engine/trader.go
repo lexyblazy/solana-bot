@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -10,6 +11,7 @@ import (
 	"solana-bot/db"
 	"solana-bot/helius"
 	"solana-bot/jupiter"
+	"solana-bot/utils"
 	"solana-bot/wallet"
 	"sync"
 	"time"
@@ -45,7 +47,7 @@ func (t *Trader) getTokenDecimals(mintAddress string) int {
 }
 
 // A Buy is swapping native sol to the "meme" token address, a SwapFromNativeSol
-func (t *Trader) buyToken(mintAddress string, amountSol float32) {
+func (t *Trader) buyToken(mintAddress string, amountSol float32) (string, error) {
 
 	exponential := float32(math.Pow(10, float64(t.getTokenDecimals(mintAddress))))
 	amountLamport := int(amountSol * exponential)
@@ -54,16 +56,18 @@ func (t *Trader) buyToken(mintAddress string, amountSol float32) {
 
 	if bal < amountLamport {
 
-		log.Printf("buyToken: Insufficient Balance, Expected >= %d, Got = %d \n", amountLamport, bal)
+		errMessage := fmt.Sprintf("buyToken: Insufficient Balance, Expected >= %d, Got = %d \n", amountLamport, bal)
+		log.Print(errMessage)
 
-		return
+		return "", errors.New(errMessage)
 	}
 
-	t.swap(SwapTokenParams{
+	return t.swap(SwapTokenParams{
 		InputMint:  t.c.Solana.NativeMint,
 		OutputMint: mintAddress,
 		Amount:     amountLamport,
 	})
+
 }
 
 func (t *Trader) isLocked(id uint64) bool {
@@ -95,22 +99,36 @@ func (t *Trader) releaseLock(id uint64) {
 }
 
 // A Sell is swapping the "meme" token address to native sol, a SwapToNativeSol
-func (t *Trader) sellToken(mintAddress string, amountToken float32) {
+func (t *Trader) sellToken(mintAddress string, rules *string) (string, error) {
 
-	exponential := float32(math.Pow(10, float64(t.getTokenDecimals(mintAddress))))
-	atomicUnit := int(amountToken * exponential)
 	bal := t.w.GetTokenBalance(mintAddress)
-
 	log.Println("TokenBalance", bal)
+
+	if rules == nil {
+		// sell everything
+		return t.swap(SwapTokenParams{
+			InputMint:  mintAddress,
+			OutputMint: t.c.Solana.NativeMint,
+			Amount:     bal,
+		})
+
+	}
+
+	// TODO - implement way to sell parts of the token
+	// swapRules := utils.Deserialize[db.SwapRules](*rules)
+	// exponential := float32(math.Pow(10, float64(t.getTokenDecimals(mintAddress))))
+	// atomicUnit := int(amountToken * exponential)
+	atomicUnit := bal
 
 	if bal < atomicUnit {
 
-		log.Printf("SellToken: Insufficient Balance, Expected >= %d, Got = %d \n", atomicUnit, bal)
+		errMessage := fmt.Sprintf("SellToken: Insufficient Balance, Expected >= %d, Got = %d \n", atomicUnit, bal)
+		log.Println(errMessage)
 
-		return
+		return "", errors.New(errMessage)
 	}
 
-	t.swap(SwapTokenParams{
+	return t.swap(SwapTokenParams{
 		InputMint:  mintAddress,
 		OutputMint: t.c.Solana.NativeMint,
 		Amount:     atomicUnit,
@@ -174,17 +192,34 @@ func (t *Trader) executeTrade(tr db.SwapTradeEntity) {
 		return
 	}
 
-	// for buy orders we set the amount
-	// for sell orders we only set the rules
-	if tr.AmountDetails != nil {
-		fmt.Println("this is a buy order")
+	var txHash string
 
-	} else if tr.Rules != nil {
-		fmt.Println("this is a sell order")
+	// for buy orders we set the amount
+	if tr.AmountDetails != nil {
+
+		amtDetails := utils.Deserialize[db.AmountDetails](*tr.AmountDetails)
+
+		hash, err := t.buyToken(tr.ToToken, amtDetails.QuantitySol)
+
+		if err != nil {
+			log.Println("executeTrade: buy failed", err)
+		}
+
+		txHash = hash
+
+	} else {
+
+		hash, err := t.sellToken(tr.FromToken, tr.Rules)
+
+		if err != nil {
+			log.Println("executeTrade: sell failed", err)
+		}
+
+		txHash = hash
 
 	}
-	// simulate trade processing
-	time.Sleep(time.Second * 5)
+
+	t.db.UpdateSwapOrder(txHash, tr.Id)
 
 	// release lock after processing
 	t.releaseLock(tr.Id)

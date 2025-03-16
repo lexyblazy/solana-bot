@@ -22,7 +22,7 @@ type Trader struct {
 	db *db.SqlClient
 	h  *helius.HttpClient
 	j  *jupiter.Client
-	w  *wallet.WalletClient
+	w  *wallet.Client
 
 	cache map[uint64]bool
 	mu    sync.RWMutex
@@ -246,10 +246,11 @@ func (t *Trader) loadTrades() {
 
 func (t *Trader) Start() {
 	// t.loadTrades()
+	log.Println("balance", t.w.GetBalance())
 	t.processPendingTrades()
 }
 
-func NewTrader(w *wallet.WalletClient, j *jupiter.Client, h *helius.HttpClient, c *config.Config, db *db.SqlClient) *Trader {
+func NewTrader(w *wallet.Client, j *jupiter.Client, h *helius.HttpClient, c *config.Config, db *db.SqlClient) *Trader {
 	return &Trader{
 		w:     w,
 		j:     j,

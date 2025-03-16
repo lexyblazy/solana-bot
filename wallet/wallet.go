@@ -14,13 +14,13 @@ const (
 	LAMPORT int = 1e9
 )
 
-type WalletClient struct {
+type Client struct {
 	privKey   solana.PrivateKey
 	PublicKey string
 	h         *helius.HttpClient
 }
 
-func New(c *config.WalletConfig, h *helius.HttpClient) *WalletClient {
+func New(c *config.WalletConfig, h *helius.HttpClient) *Client {
 
 	pkey, err := solana.PrivateKeyFromBase58(c.PrivKey)
 
@@ -33,14 +33,14 @@ func New(c *config.WalletConfig, h *helius.HttpClient) *WalletClient {
 		log.Fatal("Public Key mismatch")
 	}
 
-	return &WalletClient{
+	return &Client{
 		privKey:   pkey,
 		PublicKey: c.Pubkey,
 		h:         h,
 	}
 }
 
-func (w *WalletClient) GetBalance() int {
+func (w *Client) GetBalance() int {
 	balLamport := w.h.GetBalance(w.PublicKey)
 
 	balSol := float32(balLamport) / float32(LAMPORT)
@@ -51,7 +51,7 @@ func (w *WalletClient) GetBalance() int {
 
 }
 
-func (w *WalletClient) GetTokenBalance(mint string) int {
+func (w *Client) GetTokenBalance(mint string) int {
 
 	result := w.h.GetTokenAccountsByOwner(w.PublicKey, mint)
 
@@ -77,7 +77,7 @@ func (w *WalletClient) GetTokenBalance(mint string) int {
 
 }
 
-func (w *WalletClient) CreateSignedTxMessage(message string) string {
+func (w *Client) CreateSignedTxMessage(message string) string {
 
 	tx, err := solana.TransactionFromBase64(message)
 

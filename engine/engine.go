@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"text/template"
 
-	// "fmt"
-	// "io"
 	"log"
 	"os"
 
@@ -27,7 +25,7 @@ import (
 
 type Engine struct {
 	db     *db.SqlClient
-	w      *wallet.WalletClient
+	w      *wallet.Client
 	hs     *helius.Streamer
 	hhc    *helius.HttpClient
 	ds     *dexscreener.Client

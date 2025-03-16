@@ -199,7 +199,6 @@ func (s *SqlClient) DeleteTokens(addresses []string) {
 	}
 
 	c1, _ := result1.RowsAffected()
-	log.Printf("DeleteTokens: Deleted %d market_data records \n", c1)
 
 	// delete token query
 	query2 := fmt.Sprintf(`delete from tokens where contractAddress IN (%s)`, strings.Join(placeholders, ","))
@@ -213,7 +212,6 @@ func (s *SqlClient) DeleteTokens(addresses []string) {
 	}
 
 	c2, _ := result2.RowsAffected()
-	log.Printf("DeleteTokens: Deleted %d token records \n", c2)
 
 	err = tx.Commit()
 
@@ -222,7 +220,7 @@ func (s *SqlClient) DeleteTokens(addresses []string) {
 		return
 	}
 
-	log.Printf("DeleteTokens: Deleted %d tokens \n", len(addresses))
+	log.Printf("DeleteTokens: Deleted %d tokens and %d market_data records \n", c2, c1)
 }
 
 func (s *SqlClient) GetTopTokens(marketCap int) []TokenEntity {

@@ -370,6 +370,32 @@ func (s *SqlClient) UpdateTokenData(tokens []dexscreener.TokensByAddress) {
 	}
 }
 
+func (s *SqlClient) UpdateSwapOrder(txHash string, id uint64) {
+
+	query := `update swap_orders set txHash = ?, executedAt = ? , lastProcessedAt = ? where id = ?`
+
+	var params []any
+
+	now := time.Now().UnixMilli()
+
+	if len(txHash) == 0 {
+		params = append(params, nil, nil)
+	} else {
+		params = append(params, txHash, now)
+	}
+
+	params = append(params, now, id)
+
+	_, err := s.db.Exec(query, params...)
+
+	if err != nil {
+		log.Println("UpdateSwapOrder:", err)
+
+		return
+	}
+
+}
+
 func (s *SqlClient) InsertSwapOrder(st SwapTradeEntity) {
 
 	query := `insert into swap_orders("fromToken", "toToken", "amountDetails", "rules") VALUES (?, ?, ?, ?)`

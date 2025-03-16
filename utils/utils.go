@@ -7,3 +7,12 @@ func ToString(v interface{}) string {
 
 	return (string(b))
 }
+
+func Deserialize[T any](input string) T {
+	var result T
+
+	json.Unmarshal([]byte(input), &result)
+
+	return result
+
+}
